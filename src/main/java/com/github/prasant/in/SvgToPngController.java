@@ -18,6 +18,8 @@ import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
 import org.apache.commons.io.IOUtils;
+import org.apache.tools.tar.TarEntry;
+import org.apache.tools.tar.TarOutputStream;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -102,9 +104,61 @@ public class SvgToPngController {
 	}
 	
 	
-	
-	
-	
-	
+	@ResponseBody
+	@RequestMapping(value = "/svgtopngtar", produces="application/tar", method = RequestMethod.GET)
+	public byte[] convertSvgToPngAsTar(@RequestParam("img") String img, HttpServletResponse response) throws IOException {
+		
+		RestTemplate restTemplate = new RestTemplate();
+		String result = restTemplate.getForObject(img, String.class);
+		PNGTranscoder coder = new PNGTranscoder();
+        TranscoderInput input = new TranscoderInput(new ByteArrayInputStream(result.getBytes()));
+        ByteArrayOutputStream ostream = new ByteArrayOutputStream();
+        TranscoderOutput output = new TranscoderOutput(ostream);
+        try {
+        	coder.transcode(input, output);
+		} catch (TranscoderException e) {
+			e.printStackTrace();
+		}
+        ostream.flush();
+		
+        response.setContentType("application/tar");
+        response.setStatus(HttpServletResponse.SC_OK);
+        response.addHeader("Content-Disposition", "attachment; filename=\"img.zip\"");
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(byteArrayOutputStream);
+        TarOutputStream tarOutputStream = new TarOutputStream(bufferedOutputStream);
+        tarOutputStream.setLongFileMode(TarOutputStream.LONGFILE_GNU);
+        ArrayList<File> files = new ArrayList<>(2);
+        
+        File outputFile = new File("india.png");
+        try ( FileOutputStream outputStream = new FileOutputStream(outputFile); ) {
+            outputStream.write(ostream.toByteArray());  //write the bytes and your done. 
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        files.add(outputFile);
+
+        for (File file : files) {
+        	TarEntry te = new TarEntry(file.getName());
+        	te.setSize(file.length());
+        	tarOutputStream.putNextEntry(te);
+        	// tarOutputStream.putNextEntry(new TarEntry(file.getName()));        	
+            FileInputStream fileInputStream = new FileInputStream(file);
+
+            IOUtils.copy(fileInputStream, tarOutputStream);
+
+            fileInputStream.close();
+            tarOutputStream.closeEntry();
+        }
+
+        if (tarOutputStream != null) {
+        	tarOutputStream.finish();
+        	tarOutputStream.flush();
+            IOUtils.closeQuietly(tarOutputStream);
+        }
+        IOUtils.closeQuietly(bufferedOutputStream);
+        IOUtils.closeQuietly(byteArrayOutputStream);
+        return byteArrayOutputStream.toByteArray();
+	}	
 
 }
