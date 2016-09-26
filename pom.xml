@@ -52,6 +52,12 @@
 			<artifactId>batik-codec</artifactId>
 			<version>1.7</version>
 		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.ant/ant -->
+		<dependency>
+		    <groupId>org.apache.ant</groupId>
+		    <artifactId>ant</artifactId>
+		    <version>1.8.2</version>
+		</dependency>
 
 
 
